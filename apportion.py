@@ -43,3 +43,8 @@ def largest_remainder(votes: np.ndarray, seats: int) -> np.ndarray:
     outcome[to_add] += 1
 
     return outcome
+
+def tryall(votes: np.ndarray, seats: int):
+    print(f"D'Hondt\t\t\t{dhondt(votes,seats)}")
+    print(f"SaintLague\t\t{saint_lague(votes,seats)}")
+    print(f"LargestRemainder\t{largest_remainder(votes,seats)}")
