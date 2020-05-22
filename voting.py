@@ -2,7 +2,7 @@ import numpy as np
 import numpy.ma as ma
 
 
-def SNTV_scores(ballots: np.ndarray, seats: int, electoral_threshold=0, percentage=False):
+def SNTV_scores(ballots: np.ndarray, electoral_threshold=0, percentage=False):
     """
 
     :param ballots: (n x m) matrix that contains for each voter i the index of the party ranked at position j ballots[i,j]
@@ -23,7 +23,7 @@ def SNTV_scores(ballots: np.ndarray, seats: int, electoral_threshold=0, percenta
     return plurality_scores * passed_parties, plurality_scores, passed_parties
 
 
-def STV_scores(ballots: np.ndarray, seats: int, electoral_threshold=0, percentage=False):
+def STV_scores(ballots: np.ndarray, electoral_threshold=0, percentage=False):
     """
 
     :param ballots: (n x m) matrix that contains for each voter i the index of the party ranked at position j ballots[i,j]
@@ -63,20 +63,11 @@ def STV_scores(ballots: np.ndarray, seats: int, electoral_threshold=0, percentag
                 # counter = 0
                 shift = np.nonzero(ballots[v] < m)[0][0]
                 ballots[v] = np.roll(ballots[v], -shift)
-                # while ballots[v, 0] == m:
-                #     # "roll" the ballot to the left until
-                #     # the top-choice party is not a dead party
-                #
-                #     ballots[v] = np.roll(ballots[v], -1)
-                #     counter += 1
-                #     if counter > m:
-                #         raise RuntimeError
-                # assert shift == counter
 
     return plurality_scores * alive_parties, plurality_scores, alive_parties
 
 
-def alpha_STV_scores(ballots: np.ndarray, seats: int, alpha=0.8, electoral_threshold=0, percentage=False):
+def alpha_STV_scores(ballots: np.ndarray, alpha=0.8, electoral_threshold=0, percentage=False):
     """
 
     :param ballots: (n x m) matrix that contains for each voter i the index of the party ranked at position j ballots[i,j]
@@ -116,32 +107,31 @@ def alpha_STV_scores(ballots: np.ndarray, seats: int, alpha=0.8, electoral_thres
             for i in voters_to_change:
                 v = i[0]
                 counter = 0
-                # shift = np.nonzero(ballots[v] < m)[0][0]
-                # vote_values[v] *= alpha**shift
-                # ballots[v] = np.roll(ballots[v], -shift)
-                while ballots[v, 0] == m:
-                    vote_values[v] *= alpha
-                    # "roll" the ballot to the left until
-                    # the top-choice party is not a dead party
-                    ballots[v] = np.roll(ballots[v], -1)
-                    counter += 1
-                    if counter > m:
-                        raise RuntimeError
+                shift = np.nonzero(ballots[v] < m)[0][0]
+                vote_values[v] *= alpha ** shift
+                ballots[v] = np.roll(ballots[v], -shift)
 
     return plurality_scores * passed_parties, plurality_scores, passed_parties
 
 
 if __name__ == '__main__':
     n = 30
-    m = 5
-    e = 0.30
+    m = 8
+    e = 0.1
+    seats = 3
     random = np.random.default_rng()
     ballots = np.stack([random.permutation(m) for _ in range(n)])
     from pprint import pprint
+    from apportion import tryall
 
     pprint(ballots)
-    pprint(SNTV_scores(ballots, 3, electoral_threshold=e, percentage=True))
-    pprint(STV_scores(ballots, 3, electoral_threshold=e, percentage=True))
-    pprint(alpha_STV_scores(ballots, 3, alpha=0, electoral_threshold=e, percentage=True))
-    pprint(alpha_STV_scores(ballots, 3, alpha=1, electoral_threshold=e, percentage=True))
-    pprint(alpha_STV_scores(ballots, 3, electoral_threshold=e, percentage=True))
+    output = SNTV_scores(ballots, electoral_threshold=e, percentage=True)
+    tryall(output[0], seats)
+    output = STV_scores(ballots, electoral_threshold=e, percentage=True)
+    tryall(output[0], seats)
+    output = alpha_STV_scores(ballots, alpha=0, electoral_threshold=e, percentage=True)
+    tryall(output[0], seats)
+    output = alpha_STV_scores(ballots, alpha=1, electoral_threshold=e, percentage=True)
+    tryall(output[0], seats)
+    output = alpha_STV_scores(ballots, electoral_threshold=e, percentage=True)
+    tryall(output[0], seats)
