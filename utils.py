@@ -1,5 +1,28 @@
+from typing import Tuple
+
 import numpy as np
 from scipy.stats import betabinom
+
+
+def kl_divergence(parliament: np.ndarray, true_pref: np.ndarray, eps: float = 1e-16) -> float:
+    assert parliament.shape == true_pref.shape
+    return np.sum(np.where(parliament != 0, parliament * np.log2(parliament / true_pref), 0))
+
+def governability(parliament: np.ndarray) -> Tuple[int, int]:
+    m = parliament.shape[0]
+    v = np.zeros_like(parliament)
+
+    for alt in range(m):
+        v[alt] = parliament[alt]
+        if v[alt] > 0.5:
+            return alt, 1
+
+    for step in range(2, m):
+        for alt in range(m - step + 1):
+            v[alt] = parliament[alt] + v[alt + 1]
+            if v[alt] > 0.5:
+                return alt, step
+    return -1, -1
 
 
 class PreferenceCreator:
