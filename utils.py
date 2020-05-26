@@ -26,14 +26,17 @@ def governability(parliament: np.ndarray) -> Tuple[int, int]:
 
 
 class PreferenceCreator:
-    def __init__(self, n, m, political_spectrum):
+    def __init__(self, n, m, political_spectrum, alpha=0.7, beta=2, c=0):
         self.m = m
         self.n = n
+        self.alpha = alpha
+        self.beta = beta
+        self.c = c
         self.political_spectrum = political_spectrum
 
     def create_preferences(self):
         # political_spectrum = np.random.default_rng().permutation(m)
-        first_choices = self.political_spectrum[betabinom.rvs(self.m - 1, 0.7, 2, size=self.n)]
+        first_choices = self.political_spectrum[betabinom.rvs(self.m - 1, self.alpha, self.beta, size=self.n)]
         k = np.bincount(first_choices, minlength=self.m)
         preferences = []
         for i, v in enumerate(k):
@@ -41,12 +44,12 @@ class PreferenceCreator:
 
         return np.array(preferences)
 
-    def complete_preference(self, first_choice, n_voters, constant=0):
+    def complete_preference(self, first_choice, n_voters):
         m = self.m
         random = np.random.default_rng()
         distances = np.abs(np.arange(m) - first_choice)  # example [0, 1, 2...m-1]
         distances = np.delete(distances, first_choice)  # example [0, 1, 2...m-1]
-        pdf_unnorm = np.exp(- distances) + constant
+        pdf_unnorm = np.exp(- distances) + self.c
 
         completion = []
         for i in range(n_voters):
