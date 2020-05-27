@@ -14,6 +14,7 @@ def SNTV_scores(ballots: np.ndarray, electoral_threshold=0, percentage=False):
     if percentage:
         electoral_threshold = np.floor(electoral_threshold * ballots.shape[0])
 
+    n, m = ballots.shape
     # counts the first choices in the ballot
     plurality_scores = np.bincount(ballots[:, 0], minlength=m)
 
