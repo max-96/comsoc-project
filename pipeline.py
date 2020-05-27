@@ -11,15 +11,13 @@ from itertools import permutations
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-import multiprocessing
-
 n = 30
 m = 8
 e = 0.1
 seats = 3
 
 
-def poll(preferences: np.ndarray, probability: float):
+def get_poll(preferences: np.ndarray, probability: float):
     assert 0. <= probability <= 1., "{:.4f} is not a probability".format(probability)
     n_voters = preferences.shape[0]
     n_sample = round(n_voters * probability)
@@ -94,3 +92,4 @@ if __name__ == '__main__':
     # print(b)
     #
     # print(tabulate([a, b]))
+
