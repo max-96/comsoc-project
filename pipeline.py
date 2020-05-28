@@ -209,10 +209,12 @@ def test_gamma_beta_parallel(electoral_threshold, m, n, n_tests, political_spect
     arguments = [(i, gamma, j, beta) for i, gamma in enumerate(gammass) for j, beta in enumerate(betass)]
     print(arguments)
     out = poll.starmap(gmh.aa, arguments)
+    logging.info('finished computing.')
     for i, j, r in out:
         results['stv'][i, j] = r[0]
         results['sntv'][i, j] = r[1]
 
+    logging.info('returning.')
     return np.meshgrid(gammass, betass), results
 
 
