@@ -144,6 +144,7 @@ def test_gamma_beta(electoral_threshold, m, n, n_tests, political_spectrum, seat
 
     return np.meshgrid(gammass, betass), results
 
+
 class GammaBetaHolder:
 
     def __init__(self, electoral_threshold, m, n, n_tests, political_spectrum, seats):
@@ -151,12 +152,13 @@ class GammaBetaHolder:
         self.m = m
         self.n = n
         self.n_tests = n_tests
-        self.political_spectrum=political_spectrum
+        self.political_spectrum = political_spectrum
         self.seats = seats
 
     def aa(self, i, gamma, j, beta):
         logging.info("(%d,%d): g %.4f; b %.4f", i, j, gamma, beta)
         stv_kls = np.zeros(self.n_tests)
+        sntv_liars_kls = np.zeros(self.n_tests)
         sntv_kls = np.zeros(self.n_tests)
         for test_nr in range(self.n_tests):
             true_preferences = PreferenceCreator(self.n, self.m, self.political_spectrum).create_preferences()
@@ -168,19 +170,23 @@ class GammaBetaHolder:
             stv_outcome = apportion.largest_remainder(stv_scores, seats)
             stv_kls[test_nr] = utils.kl_divergence(stv_outcome / seats, first_distribution)
 
-            # SNTV outcome
-            sntv_scores, *_ = voting.SNTV_scores(man_ballot, self.electoral_threshold, percentage=True)
+            # SNTV outcome truthful
+            sntv_scores, *_ = voting.SNTV_scores(true_preferences, self.electoral_threshold, percentage=True)
             sntv_outcome = apportion.largest_remainder(sntv_scores, seats)
             sntv_kls[test_nr] = utils.kl_divergence(sntv_outcome / seats, first_distribution)
-        return i, j, (stv_kls.mean(), sntv_kls.mean())
+            del sntv_scores, sntv_outcome
+
+            # SNTV outcome liars
+            sntv_scores, *_ = voting.SNTV_scores(man_ballot, self.electoral_threshold, percentage=True)
+            sntv_outcome = apportion.largest_remainder(sntv_scores, seats)
+            sntv_liars_kls[test_nr] = utils.kl_divergence(sntv_outcome / seats, first_distribution)
+        return i, j, (stv_kls.mean(), stv_kls.mean(), sntv_liars_kls.mean())
 
 
-
-def test_gamma_beta_parallel(electoral_threshold, m, n, n_tests, political_spectrum, seats):
-    steps = 10
+def test_gamma_beta_parallel(electoral_threshold, m, n, n_tests, political_spectrum, seats, steps=10):
     gammass = np.geomspace(0.0001, 1, num=steps)
     betass = np.linspace(0, 1, num=steps)
-    results = {'stv': np.zeros((steps, steps)), 'sntv': np.zeros((steps, steps))}
+    results = {'stv': np.zeros((steps, steps)), 'sntv': np.zeros((steps, steps)), 'sntv-l': np.zeros((steps, steps))}
 
     # Not used because python cannot pickle this. TODO remove it
     #
@@ -213,6 +219,7 @@ def test_gamma_beta_parallel(electoral_threshold, m, n, n_tests, political_spect
     for i, j, r in out:
         results['stv'][i, j] = r[0]
         results['sntv'][i, j] = r[1]
+        results['sntv-l'][i, j] = r[2]
 
     logging.info('returning.')
     return np.meshgrid(gammass, betass), results
