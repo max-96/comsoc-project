@@ -6,7 +6,9 @@ from scipy.stats import betabinom
 
 def kl_divergence(parliament: np.ndarray, true_pref: np.ndarray, eps: float = 1e-16) -> float:
     assert parliament.shape == true_pref.shape
-    return np.sum(np.where(parliament != 0, parliament * np.log2(parliament / true_pref), 0))
+    with np.errstate(divide='ignore', invalid='ignore'):
+        return np.sum(np.where(parliament != 0, parliament * np.log2(parliament / true_pref), 0))
+
 
 def governability(parliament: np.ndarray) -> Tuple[int, int]:
     m = parliament.shape[0]
