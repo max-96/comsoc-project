@@ -156,7 +156,7 @@ class GammaBetaHolder:
         self.political_spectrum = political_spectrum
         self.seats = seats
 
-    def aa(self, i, gamma, j, beta):
+    def aux_gamma_beta(self, i, gamma, j, beta):
         # logging.info("(%d,%d): g %.4f; b %.4f", i, j, gamma, beta)
         stv_kls = np.zeros(self.n_tests)
         sntv_liars_kls = np.zeros(self.n_tests)
@@ -185,7 +185,7 @@ class GammaBetaHolder:
         return i, j, (stv_kls.mean(), sntv_kls.mean(), sntv_liars_kls.mean())
         # return i, j, (0, 0, (gamma+2)*beta)
 
-    def bb(self, i, alpha, j, beta):
+    def aux_alpha_beta(self, i, alpha, j, beta):
         stv_kls = np.zeros(self.n_tests)
         astv_kls = np.zeros(self.n_tests)
         for test_nr in range(self.n_tests):
@@ -206,7 +206,7 @@ class GammaBetaHolder:
         logging.info("(%d,%d): a %.4f; b %.4f; kl-astv_liars: %.4f", i, j, alpha, beta, astv_kls.mean())
         return i, j, (stv_kls.mean(), astv_kls.mean())
 
-    def cc(self, i, gamma, j, alpha):
+    def aux_alpha_gamma(self, i, gamma, j, alpha):
         beta = 1.0
         stv_kls = np.zeros(self.n_tests)
         astv_kls = np.zeros(self.n_tests)
@@ -240,7 +240,7 @@ def test_gamma_beta_parallel(electoral_threshold, m, n, n_tests, political_spect
     poll = multiprocessing.Pool(8)
     arguments = [(i, gammass[i, j], j, betass[i, j]) for i in range(steps) for j in range(steps)]
     print(arguments)
-    out = poll.starmap(gmh.aa, arguments)
+    out = poll.starmap(gmh.aux_gamma_beta, arguments)
     logging.info('finished computing.')
     for i, j, r in out:
         results['stv'][i, j] = r[0]
@@ -261,7 +261,7 @@ def test_alpha_beta_parallel(electoral_threshold, m, n, n_tests, political_spect
     pool = multiprocessing.Pool(8)
     arguments = [(i, alphass[i, j], j, betass[i, j]) for i in range(steps) for j in range(steps)]
     print(arguments)
-    out = pool.starmap(gmh.bb, arguments)
+    out = pool.starmap(gmh.aux_alpha_beta, arguments)
     logging.info('finished computing.')
     for i, j, r in out:
         results['stv'][i, j] = r[0]
@@ -281,7 +281,7 @@ def test_alpha_gamma_parallel(electoral_threshold, m, n, n_tests, political_spec
     pool = multiprocessing.Pool(8)
     arguments = [(i, gammass[i, j], j, alphass[i, j]) for i in range(steps) for j in range(steps)]
     print(arguments)
-    out = pool.starmap(gmh.cc, arguments)
+    out = pool.starmap(gmh.aux_alpha_gamma, arguments)
     logging.info('finished computing.')
     for i, j, r in out:
         results['stv'][i, j] = r[0]
