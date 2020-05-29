@@ -14,6 +14,7 @@ from tqdm import tqdm
 import logging
 import multiprocessing
 
+
 # n = 30
 # m = 8
 # e = 0.1
@@ -183,7 +184,7 @@ class GammaBetaHolder:
         logging.info("(%d,%d): g %.4f; b %.4f; kl-sntv_liars: %.4f", i, j, gamma, beta, sntv_liars_kls.mean())
         return i, j, (stv_kls.mean(), sntv_kls.mean(), sntv_liars_kls.mean())
         # return i, j, (0, 0, (gamma+2)*beta)
-    
+
     def bb(self, i, alpha, j, beta):
         stv_kls = np.zeros(self.n_tests)
         astv_kls = np.zeros(self.n_tests)
@@ -205,7 +206,27 @@ class GammaBetaHolder:
         logging.info("(%d,%d): a %.4f; b %.4f; kl-astv_liars: %.4f", i, j, alpha, beta, astv_kls.mean())
         return i, j, (stv_kls.mean(), astv_kls.mean())
 
+    def cc(self, i, alpha, j, gamma):
+        beta = 1.0
+        stv_kls = np.zeros(self.n_tests)
+        astv_kls = np.zeros(self.n_tests)
+        for test_nr in range(self.n_tests):
+            true_preferences = PreferenceCreator(self.n, self.m, self.political_spectrum).create_preferences()
+            poll_results = get_poll(true_preferences, gamma)
+            man_ballot = manipulate(true_preferences, np.nonzero(poll_results < self.electoral_threshold)[0], beta)
+            first_distribution = get_first_choice_dist(true_preferences)
 
+            stv_scores, *_ = voting.STV_scores(true_preferences, self.electoral_threshold, percentage=True)
+            stv_outcome = apportion.largest_remainder(stv_scores, self.seats)
+            stv_kls[test_nr] = utils.kl_divergence(stv_outcome / self.seats, first_distribution)
+
+            # a-STV outcome
+            astv_scores, *_ = voting.alpha_STV_scores(man_ballot, alpha, self.electoral_threshold, percentage=True)
+            astv_outcome = apportion.largest_remainder(astv_scores, self.seats)
+            astv_kls[test_nr] = utils.kl_divergence(astv_outcome / self.seats, first_distribution)
+
+        logging.info("(%d,%d): a %.4f; g %.4f; kl-astv_liars: %.4f", i, j, alpha, gamma, astv_kls.mean())
+        return i, j, (stv_kls.mean(), astv_kls.mean())
 
 
 def test_gamma_beta_parallel(electoral_threshold, m, n, n_tests, political_spectrum, seats, steps=10):
@@ -247,6 +268,26 @@ def test_alpha_beta_parallel(electoral_threshold, m, n, n_tests, political_spect
 
     logging.info('returning.')
     return (alphass, betass), results
+
+
+def test_alpha_gamma_parallel(electoral_threshold, m, n, n_tests, political_spectrum, seats, steps=10):
+    alphass = np.linspace(0, 1, num=steps)
+    gammass = np.geomspace(0.0001, 1, num=steps)
+    alphass, gammass = np.meshgrid(alphass, gammass)
+    results = {'stv': np.zeros((steps, steps)), 'a-sntv': np.zeros((steps, steps))}
+
+    gmh = GammaBetaHolder(electoral_threshold, m, n, n_tests, political_spectrum, seats)
+    pool = multiprocessing.Pool(8)
+    arguments = [(i, alphass[i, j], j, gammass[i, j]) for i in range(steps) for j in range(steps)]
+    print(arguments)
+    out = pool.starmap(gmh.cc, arguments)
+    logging.info('finished computing.')
+    for i, j, r in out:
+        results['stv'][i, j] = r[0]
+        results['a-sntv'][i, j] = r[1]
+
+    logging.info('returning.')
+    return (alphass, gammass), results
 
 
 def lalala(electoral_threshold, m, n, n_tests, political_spectrum, seats, beta, poll_covid):
@@ -299,9 +340,8 @@ def main():
     seats = 100
     electoral_threshold = 0.05
     political_spectrum = np.array([10, 9, 11, 8, 12, 7, 13, 6, 14, 5, 15, 4, 16, 3, 17, 2, 18, 1, 19, 0])
-    (alphas, betas), results = test_alpha_beta_parallel(electoral_threshold, m, n, n_tests, political_spectrum, seats, steps)
-
-
+    (alphas, betas), results = test_alpha_beta_parallel(electoral_threshold, m, n, n_tests, political_spectrum, seats,
+                                                        steps)
 
 
 if __name__ == '__main__':
