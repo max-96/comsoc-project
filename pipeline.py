@@ -24,8 +24,8 @@ def get_poll(preferences: np.ndarray, probability: float):
     assert 0. <= probability <= 1., "{:.4f} is not a probability".format(probability)
     n_voters = preferences.shape[0]
     n_sample = int(round(n_voters * probability))
-    if n_sample == 0:
-        n_sample = 1
+    # if n_sample == 0:
+    #     n_sample = 1
 
     indices = np.random.default_rng().permutation(n_voters)[:n_sample]
     samples_prefs = preferences[indices, 0]
@@ -156,7 +156,7 @@ class GammaBetaHolder:
         self.seats = seats
 
     def aa(self, i, gamma, j, beta):
-        logging.info("(%d,%d): g %.4f; b %.4f", i, j, gamma, beta)
+        # logging.info("(%d,%d): g %.4f; b %.4f", i, j, gamma, beta)
         stv_kls = np.zeros(self.n_tests)
         sntv_liars_kls = np.zeros(self.n_tests)
         sntv_kls = np.zeros(self.n_tests)
@@ -180,39 +180,20 @@ class GammaBetaHolder:
             sntv_scores, *_ = voting.SNTV_scores(man_ballot, self.electoral_threshold, percentage=True)
             sntv_outcome = apportion.largest_remainder(sntv_scores, seats)
             sntv_liars_kls[test_nr] = utils.kl_divergence(sntv_outcome / seats, first_distribution)
-        return i, j, (stv_kls.mean(), stv_kls.mean(), sntv_liars_kls.mean())
+        logging.info("(%d,%d): g %.4f; b %.4f; kl-sntv_liars: %.4f", i, j, gamma, beta, sntv_liars_kls.mean())
+        return i, j, (stv_kls.mean(), sntv_kls.mean(), sntv_liars_kls.mean())
+        # return i, j, (0, 0, (gamma+2)*beta)
 
 
 def test_gamma_beta_parallel(electoral_threshold, m, n, n_tests, political_spectrum, seats, steps=10):
     gammass = np.geomspace(0.0001, 1, num=steps)
     betass = np.linspace(0, 1, num=steps)
+    gammass, betass = np.meshgrid(gammass, betass)
     results = {'stv': np.zeros((steps, steps)), 'sntv': np.zeros((steps, steps)), 'sntv-l': np.zeros((steps, steps))}
-
-    # Not used because python cannot pickle this. TODO remove it
-    #
-    # def aa(i, gamma, j, beta):
-    #     logging.info("g %.4f; b %.4f", gamma, beta)
-    #     stv_kls = np.zeros(n_tests)
-    #     sntv_kls = np.zeros(n_tests)
-    #     for test_nr in range(n_tests):
-    #         true_preferences = PreferenceCreator(n, m, political_spectrum).create_preferences()
-    #         poll_results = get_poll(true_preferences, gamma)
-    #         man_ballot = manipulate(true_preferences, np.nonzero(poll_results < electoral_threshold)[0], beta)
-    #         first_distribution = get_first_choice_dist(true_preferences)
-    #
-    #         stv_scores, *_ = voting.STV_scores(true_preferences, electoral_threshold, percentage=True)
-    #         stv_outcome = apportion.largest_remainder(stv_scores, seats)
-    #         stv_kls[test_nr] = utils.kl_divergence(stv_outcome / seats, first_distribution)
-    #
-    #         # SNTV outcome
-    #         sntv_scores, *_ = voting.SNTV_scores(man_ballot, electoral_threshold, percentage=True)
-    #         sntv_outcome = apportion.largest_remainder(sntv_scores, seats)
-    #         sntv_kls[test_nr] = utils.kl_divergence(sntv_outcome / seats, first_distribution)
-    #     return i, j, (stv_kls.mean(), sntv_kls.mean())
 
     gmh = GammaBetaHolder(electoral_threshold, m, n, n_tests, political_spectrum, seats)
     poll = multiprocessing.Pool(8)
-    arguments = [(i, gamma, j, beta) for i, gamma in enumerate(gammass) for j, beta in enumerate(betass)]
+    arguments = [(i, gammass[i, j], j, betass[i, j]) for i in range(steps) for j in range(steps)]
     print(arguments)
     out = poll.starmap(gmh.aa, arguments)
     logging.info('finished computing.')
@@ -222,7 +203,7 @@ def test_gamma_beta_parallel(electoral_threshold, m, n, n_tests, political_spect
         results['sntv-l'][i, j] = r[2]
 
     logging.info('returning.')
-    return np.meshgrid(gammass, betass), results
+    return (gammass, betass), results
 
 
 def main():

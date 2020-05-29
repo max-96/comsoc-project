@@ -27,6 +27,17 @@ def governability(parliament: np.ndarray) -> Tuple[int, int]:
     return -1, -1
 
 
+def social_welfare(parliament: np.ndarray, true_preferences: np.ndarray):
+    # true pref: (n, m)
+    m = parliament.shape[0]
+    bordas = np.zeros(m)
+    for i in range(m):
+        bordas += (m - i - 1) * np.bincount(true_preferences[:, i], minlength=m)
+
+    bordas /= true_preferences.shape[0]
+    return bordas @ parliament
+
+
 class PreferenceCreator:
     def __init__(self, n, m, political_spectrum, alpha=0.2, beta=0.5, c=0):
         self.m = m
